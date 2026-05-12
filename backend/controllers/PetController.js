@@ -142,4 +142,43 @@ module.exports = class PetController {
             res.status(500).json({ message: error })
         }
     }
+    static async updatePet(req, res) {
+        const id = req.params.id
+        const { name, age, weight, color } = req.body
+        const images = req.files
+        const token = getToken(req)
+        const user = await getUserByToken(token)
+        try {
+            const pet = await Pet.findById(id)
+            if (!pet) {
+                res.status(404).json({ message: 'Pet não encontrado!' })
+                return
+            }
+            if (pet.user._id.toString() !== user._id.toString()) {
+                res.status(403).json({ message: 'Você não tem permissão para editar este pet!' })
+                return
+            }
+            if (name) pet.name = name
+            if (age) pet.age = age
+            if (weight) pet.weight = weight
+            if (color) pet.color = color
+
+            if (images && images.length > 0) {
+                const imageNames = images.map((image) => image.filename)
+                pet.image = imageNames
+            }
+            const updatedPet = await Pet.findByIdAndUpdate(
+                { _id: id },
+                { $set: pet },
+                { new: true }
+            )
+            res.status(200).json({
+                message: 'Pet atualizado com sucesso!',
+                pet: updatedPet
+            })
+        } catch (error) {
+            res.status(500).json({ message: error })
+        }
+    }
 }
+
